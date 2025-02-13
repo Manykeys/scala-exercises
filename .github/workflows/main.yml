@@ -1,0 +1,70 @@
+on: [pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        scala: [2.13.12]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          check-latest: true
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Coursier cache
+        uses: coursier/cache-action@v6
+
+      - name: Compile and test exercises00
+        if: github.event.pull_request.head.ref == 'exercises00'
+        run: sbt "project exercises00" clean compile test
+
+      - name: Compile and test exercises01
+        if: github.event.pull_request.head.ref == 'exercises01'
+        run: sbt "project exercises01" clean compile test
+
+      - name: Compile and test exercises02
+        if: github.event.pull_request.head.ref == 'exercises02'
+        run: sbt "project exercises02" clean compile test
+
+      - name: Compile and test exercises03
+        if: github.event.pull_request.head.ref == 'exercises03'
+        run: sbt "project exercises03" clean scalafmtCheck test:scalafmtCheck compile test
+
+      - name: Compile and test exercises04
+        if: github.event.pull_request.head.ref == 'exercises04'
+        run: sbt "project exercises04" clean scalafmtCheck test:scalafmtCheck compile test
+
+      - name: Compile and test exercises05
+        if: github.event.pull_request.head.ref == 'exercises05'
+        run: sbt "project exercises05" clean scalafmtCheck test:scalafmtCheck scalafix compile test
+
+      - name: Compile and test exercises06
+        if: github.event.pull_request.head.ref == 'exercises06'
+        run: sbt "project exercises06" clean scalafmtCheck test:scalafmtCheck scalafix compile test
+
+      - name: Compile and test exercises07
+        if: github.event.pull_request.head.ref == 'exercises07'
+        run: sbt "project exercises07" clean scalafmtCheck test:scalafmtCheck scalafix compile test
+
+      - name: Compile and test exercises08
+        if: github.event.pull_request.head.ref == 'exercises08'
+        run: sbt "project exercises08" clean scalafmtCheck test:scalafmtCheck compile test
+
+      - name: Compile and test exercises09
+        if: github.event.pull_request.head.ref == 'exercises09'
+        run: sbt "project exercises09" clean scalafmtCheck test:scalafmtCheck compile test
+
+      - name: Compile and test exercises10
+        if: github.event.pull_request.head.ref == 'exercises10'
+        run: sbt "project exercises10" clean scalafmtCheck test:scalafmtCheck compile test
+
+      - name: Compile and test workshop
+        if: github.event.pull_request.head.ref == 'workshop'
+        run: sbt "project workshop" clean scalafmtCheck test:scalafmtCheck scalafix compile test
