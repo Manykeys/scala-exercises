@@ -1,7 +1,8 @@
 package exercises01.game
 
-class Game(controller: GameController) {
+import scala.annotation.tailrec
 
+class Game(controller: GameController) {
   /**
     * Игра угадай число
     * Ввод и вывод необходимо осуществлять с помощью методов controller
@@ -16,5 +17,40 @@ class Game(controller: GameController) {
     *
     * @param number загаданное число
     */
-  def play(number: Int): Unit = ???
+
+  def play(number: Int): Unit = {
+    def startGameLoop(input: String): Boolean = {
+      input.toIntOption match {
+        case Some(value) if value < number =>
+          controller.numberIsBigger()
+          true
+        case Some(value) if value > number =>
+          controller.numberIsSmaller()
+          true
+        case Some(_) =>
+          controller.guessed()
+          false
+        case None =>
+          controller.wrongInput()
+          true
+      }
+    }
+
+    @tailrec
+    def startGame(): Unit = {
+      controller.askNumber()
+      val input = controller.nextLine()
+
+      input match {
+        case "I give up" => controller.giveUp(number)
+        case _ =>
+          val shouldRestartGame = startGameLoop(input)
+          if (shouldRestartGame)
+            startGame()
+      }
+    }
+
+    startGame()
+  }
 }
+
