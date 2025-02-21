@@ -17,12 +17,16 @@ class Functions {
     _ => b
 
   def liftOption[A, B](f: A => B): A => Option[B] =
-    x => Some(f(x))
+    x => Option(f(x))
 
-  def chain[A](functions: List[A => A]): A => Option[A] =
-    initialState =>
-      if (functions.isEmpty) None
-      else Some(functions.foldLeft(initialState)((acc, f) => f(acc)))
+  def chain[A](functions: List[A => A]): A => Option[A] = {
+    val compositeFunction = functions.reduceOption((f, g) => g compose f)
+    value =>
+      compositeFunction match {
+        case Some(f) => Option(f(value))
+        case _       => None
+      }
+  }
 
   def zip[A, B, C](f: A => B, g: A => C): A => (B, C) =
     x => (f(x), g(x))
