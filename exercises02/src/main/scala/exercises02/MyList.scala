@@ -45,7 +45,6 @@ object MyList {
       case _                => None
     }
 
-  @tailrec
   def filter[A](myList: MyList[A], predicate: A => Filter.Filter): MyList[A] = {
     def checkPredicate(item: A)(implicit predicate: A => Filter.Filter): Boolean =
       predicate(item) match {
@@ -56,12 +55,11 @@ object MyList {
     implicit val filterPredicate: A => Filter.Filter = predicate
 
     myList match {
-      case Cons(head, tail) if checkPredicate(head) =>
+      case Cons(head, tail) =>
         reverse(
-          foldLeft(tail)(Cons(head, Nil))((acc, el) => if (checkPredicate(el)) Cons(el, acc) else acc)
+          foldLeft[A, MyList[A]](Cons(head, tail))(Nil)((acc, el) => if (checkPredicate(el)) Cons(el, acc) else acc)
         )
-      case Cons(head, tail) if !checkPredicate(head) => filter(tail, predicate)
-      case Nil                                       => Nil
+      case Nil => Nil
     }
   }
 
