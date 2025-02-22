@@ -20,12 +20,8 @@ class Functions {
     x => Option(f(x))
 
   def chain[A](functions: List[A => A]): A => Option[A] = {
-    val compositeFunction = functions.reduceOption((f, g) => g compose f)
-    value =>
-      compositeFunction match {
-        case Some(f) => Option(f(value))
-        case _       => None
-      }
+    val compositeFunction = functions.reduceOption((f, g) => f andThen g)
+    value => compositeFunction.map(_(value))
   }
 
   def zip[A, B, C](f: A => B, g: A => C): A => (B, C) =
