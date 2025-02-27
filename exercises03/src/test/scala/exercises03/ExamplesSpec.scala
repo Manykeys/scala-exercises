@@ -1,6 +1,10 @@
 package exercises03
 
 import org.scalatest.wordspec.AnyWordSpec
+import exercises03.either.EitherCombinators._
+import exercises03.parser.Error._
+import exercises03.parser.Examples._
+import exercises03.parser._
 
 class ExamplesSpec extends AnyWordSpec {
   "Examples.transformToOption" should {
