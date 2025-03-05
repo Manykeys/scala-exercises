@@ -29,10 +29,15 @@ lazy val exercises03 = project in file("exercises03") settings (
   libraryDependencies ++= libraries,
   scalacOptions ++= Seq("-feature", "-language:implicitConversions")
 )
+lazy val exercises04 = project in file("exercises04") settings (
+  libraryDependencies ++= libraries,
+  scalacOptions ++= Seq("-feature", "-language:implicitConversions")
+)
 
 // lectures
 lazy val lecture01 = project in file("lecture01") settings (libraryDependencies ++= libraries)
 lazy val lecture02 = project in file("lecture02") settings (libraryDependencies ++= libraries)
 lazy val lecture03 = project in file("lecture03") settings (libraryDependencies ++= libraries)
+lazy val lecture04 = project in file("lecture04") settings (libraryDependencies ++= libraries)
 
 lazy val kindProjectorDep = "org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full
