@@ -9,10 +9,24 @@ trait Transformer[A, B] {
 }
 
 object TransformerInstances {
-  implicit val transformer: Transformer[RawUser, User] = ???
-}
+  implicit val transformer: Transformer[RawUser, User] = new Transformer[RawUser, User] {
 
-object TransformerSyntax {}
+    override def toOption(a: RawUser): Option[User] = toEither(a).toOption
+
+    override def toEither(a: RawUser): Either[Error, User] =
+      for {
+        userId     <- a.id.toLongOption.map(Right(_)).getOrElse(Left(InvalidId))
+        firstName  <- a.firstName.map(Right(_)).getOrElse(Left(InvalidName))
+        secondName <- a.secondName.map(Right(_)).getOrElse(Left(InvalidName))
+      } yield User(userId, UserName(firstName, secondName, a.thirdName))
+  }
+}
+object TransformerSyntax {
+  implicit class TransformerOps[A, B](private val value: A) extends AnyVal {
+    def transformToOption[B](implicit ev: Transformer[A, B]): Option[B]        = ev.toOption(value)
+    def transformToEither[B](implicit ev: Transformer[A, B]): Either[Error, B] = ev.toEither(value)
+  }
+}
 
 object Examples {
   import TransformerInstances._

@@ -1,12 +1,17 @@
 package exercises06.e1_list_ops
 
-import scala.Integral.Implicits.infixIntegralOps
+import scala.math.Integral.Implicits.infixIntegralOps
 
-class ListOps[A: Integral](list: List[A]) {}
+class ListOps[A: Integral](list: List[A]) {
+  private val impl        = implicitly[Integral[A]]
+  def filterOdd: List[A]  = list.filter(x => x % impl.fromInt(2) != impl.fromInt(0))
+  def filterEven: List[A] = list.filter(x => x % impl.fromInt(2) == impl.fromInt(0))
+}
 
-object Examples {
+object Examples extends App {
   // сделайте так, чтобы скомпилировалось
-  def listOps[A: Integral](list: List[A]): ListOps[A] = new ListOps[A](list)
+
+  implicit def listOps[A: Integral](list: List[A]): ListOps[A] = new ListOps[A](list)
 
   List[Int](1, 2, 3).filterOdd
   List[Int](1, 2, 3).filterEven
