@@ -1,11 +1,10 @@
 package writer.app
 
 import data.NonEmptyList
+import typeclasses.Monoid.syntax._
 import typeclasses.{Monoid, Semigroup}
 import writer.Writer
-import typeclasses.Monad.syntax._
-import typeclasses.Monoid.syntax._
-import domain._
+import writer.app.domain._
 
 object WriterApp extends App {
   case class Logs(list: List[String])
@@ -45,10 +44,21 @@ object WriterApp extends App {
         Writer.tell(Logs.single(str))
     }
 
-    def transact(good: Good): WithLogs[Transaction] = ???
+    def transact(good: Good): WithLogs[Transaction] =
+      Writer[Logs, Transaction](Logs.single(f"spent ${good.price}"), Transaction(good.price))
 
-    def aggregate(transactions: NonEmptyList[Transaction]): WithLogs[Transaction] = ???
+    def aggregate(transactions: NonEmptyList[Transaction]): WithLogs[Transaction] = {
+      val all = transactions.reduce(Semigroup[Transaction].combine)
+      Writer[Logs, Transaction](Logs.single(f"spent total ${all.price}"), all)
+    }
 
-    def buyAll(wallet: Wallet): WithLogs[Wallet] = ???
+    def buyAll(wallet: Wallet): WithLogs[Wallet] = {
+      for {
+        t1    <- transact(Good(1))
+        t2    <- transact(Good(2))
+        t3    <- transact(Good(3))
+        total <- aggregate(NonEmptyList.of(t1, t2, t3))
+      } yield wallet.copy(amount = wallet.amount - total.price)
+    }
   }
 }

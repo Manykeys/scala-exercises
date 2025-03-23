@@ -4,7 +4,6 @@ import data.NonEmptyList
 import reader.Reader
 import reader.app.Currency._
 import reader.app.domain._
-import typeclasses.Monad.syntax._
 
 object ReaderApp extends App {
   val exchanges: Exchanges = {
@@ -48,10 +47,28 @@ object ReaderApp extends App {
   }
 
   object ReaderService {
-    def transact(currency: Currency, good: Good): Reader[Exchanges, Transaction] = ???
+    def transact(currency: Currency, good: Good): Reader[Exchanges, Transaction] =
+      Reader.ask[Exchanges, Transaction](exc => Transaction(currency, good.price * exc(good.currency, currency)))
 
-    def aggregate(currency: Currency, transactions: NonEmptyList[Transaction]): Reader[Exchanges, Transaction] = ???
+    def aggregate(currency: Currency, transactions: NonEmptyList[Transaction]): Reader[Exchanges, Transaction] =
+      Reader.ask[Exchanges, Transaction](exc =>
+        transactions.reduce { (acc, cur) =>
+          acc.copy(
+            price = (acc.price * exc(acc.currency, currency)) + (cur.price * exc(cur.currency, currency)),
+            currency = currency
+          )
+        }
+      )
 
-    def buyAll(wallet: Wallet): Reader[Exchanges, Wallet] = ???
+    def buyAll(wallet: Wallet): Reader[Exchanges, Wallet] =
+      Reader.ask[Exchanges, Wallet](exc => {
+        val transact1 = transact(Euro, Good(Dollar, 1)).run(exc)
+        val transact2 = transact(Yen, Good(Dollar, 2)).run(exc)
+        val transact3 = transact(Ruble, Good(Dollar, 3)).run(exc)
+        val transact4 = transact(Dollar, Good(Dollar, 4)).run(exc)
+        val aggregatedTransactions =
+          aggregate(wallet.currency, NonEmptyList.of(transact1, transact2, transact3, transact4))
+        wallet.copy(amount = wallet.amount - aggregatedTransactions.run(exc).price)
+      })
   }
 }
