@@ -27,7 +27,7 @@ object ThreadPool {
     // Worker потоки читают эту очередь, берут из нее задачи, выполнюят их.
     // Следует использовать Thread safe структуру данных, так как несколько потоков будут брать
     // из очереди объекты, тем самым мутируя ее.
-    val queue: java.util.concurrent.BlockingQueue[() => Unit] = ???
+    val queue: java.util.concurrent.BlockingQueue[() => Unit] = new LinkedBlockingQueue[() => Unit]()
 
     private val workerThreads = new ArrayBuffer[WorkerThread]()
 
@@ -46,15 +46,23 @@ object ThreadPool {
       4. Поток возвращается к пункту 1.
        */
       @tailrec
-      private final def workerThreadAlg(): Unit = {
-        ???
-        workerThreadAlg()
-      }
+      private final def workerThreadAlg(): Unit =
+        threadState.get() match {
+          case Terminated => ()
+          case _ =>
+            Option(queue.poll(ttl.length, ttl.unit)) match {
+              case None => threadState.set(Terminated)
+              case Some(task) =>
+                threadState.set(Busy)
+                Try(task())
+                workerThreadAlg()
+            }
+        }
 
       val threadState: AtomicReference[ThreadState] = new AtomicReference[ThreadState](FreeForWork)
 
       // Функция запускает поток, который выполняет workerThreadAlg в вечной рекурсии.
-      def start(): Unit = ???
+      def start(): Unit = factory.startThread(() => workerThreadAlg()).start()
     }
 
     def startWorkerThread(): Unit = {
@@ -68,7 +76,11 @@ object ThreadPool {
     // можно создать новый worker поток.
     // Может возникнуть конкуренция, если несколько потоков проверят какое-нибудь условие, войдут в блок создания потока,
     // создадут потоков больше чем maxThreads. Для избежания этого можно воспользоваться блоком synchronized или ReentrantLock.
-    def tryToExpandThreads(): Unit = ???
+    def tryToExpandThreads(): Unit = workerThreads.synchronized {
+      val activeWorkers = workerThreads.filter(_.threadState.get() != Terminated)
+      if (activeWorkers.forall(_.threadState.get() == Busy) && activeWorkers.length < maxThreads)
+        startWorkerThread()
+    }
 
     def execute(task: () => Unit): Unit = {
       tryToExpandThreads()
