@@ -1,8 +1,9 @@
 package exercises08.competition
 
+import exercises08.competition.domain.ScenarioError.TopAuthorNotFound
 import exercises08.service.{TwitterService, TwitterServiceFuture}
-import exercises08.twitter.{LocalTwitterApi, TwitterApi}
 import exercises08.twitter.domain._
+import exercises08.twitter.{LocalTwitterApi, TwitterApi}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,13 +30,38 @@ class FutureCompetition(service: TwitterService[Future], methods: CompetitionMet
       users: List[User],
       followers: Map[User, List[User]],
       botUser: User
-  ): Future[User] = ???
+  ): Future[User] = {
+    for {
+      tweetUserPairs <- Future.traverse(users) { user =>
+        service.tweet(user, s"${user.id} will win!").map(tweetId => (user, tweetId))
+      }
+
+      (_, userTweets) = tweetUserPairs.partition(_._1 == botUser)
+      tweetIds        = userTweets.map(_._2)
+      allTweetIds     = tweetUserPairs.map(_._2)
+
+      _ <- Future.sequence {
+        userTweets.flatMap {
+          case (user, tweetId) =>
+            followers.getOrElse(user, Nil).map(follower => service.like(follower, tweetId))
+        }
+      }
+
+      _ <- methods.unlikeAll(botUser, allTweetIds)
+
+      maybeWinner <- methods.topAuthor(tweetIds)
+      winner <- maybeWinner match {
+        case Some(user) => Future.apply(user)
+        case None       => Future.failed(TopAuthorNotFound)
+      }
+    } yield winner
+  }
 }
 
 object FutureCompetitionStart extends App {
-  import scala.util.Random
-  import scala.concurrent.duration.DurationInt
   import scala.concurrent.Await
+  import scala.concurrent.duration.DurationInt
+  import scala.util.Random
 
   implicit val ec: ExecutionContext = ExecutionContext.global
 
