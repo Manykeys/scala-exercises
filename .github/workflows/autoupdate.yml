@@ -19,7 +19,7 @@ jobs:
           token: ${{ secrets.GH_TOKEN }}
 
       - name: actions-template-sync
-        uses: AndreasAugustin/actions-template-sync@v1.5.0
+        uses: AndreasAugustin/actions-template-sync@v2.5.1
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           source_repo_path: filp-2025/exercises
@@ -28,4 +28,5 @@ jobs:
           pr_title: 'Обновление репозитория студента из репозитория с домашними работами'
           pr_commit_msg: 'Обновление репозитория студента из репозитория с домашними работами'
           pr_branch_name_prefix: sync_repo
+          is_keep_branch_on_pr_cleanup: true
 
