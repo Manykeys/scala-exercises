@@ -1,30 +1,31 @@
-
-
 object ex5_io_error extends App {
-  def getNumber: IO[Int] = IO(12)
+  case class NoSausageException() extends RuntimeException("Кончилась колбаса!")
+  case class NoPotatoException() extends RuntimeException("Кончилась картошка!")
 
-  // Выбрасывание ошибок
-  def makeDivide(a: Int, b: Int): IO[Double] =
-    if(b == 0) IO.raiseError(new RuntimeException("Div by zero")) else
-      IO {
-        a.toDouble / b
-      }
+  // Создание
+  val makeOlivier: IO[String] = IO.raiseError(new RuntimeException(NoSausageException()))
 
-  val task: IO[Double] =
-    for {
-      num <- getNumber
-      div <- makeDivide(num, 0)
-    } yield div
+  // handleError
+  val handled: IO[String] = makeOlivier.handleError(_ => "Положим мяско!")
+  val handledWith: IO[String] = makeOlivier.handleErrorWith(_ => IO.println("Идем в магаз за колбасой :("))
 
-  task.unsafeRunSync()
-  // Обработка ошибок
+  // recover
+  val recovered: IO[String] = makeOlivier.recover {
+    case _: NoSausageException => "Положим мяско!"
+    case _: NoPotatoException  => "Положим батат!"
+  }
+  val recoveredWith: IO[String] = makeOlivier.recoverWith {
+    case _: NoSausageException => IO.println("Идем в магаз за колбасой :(")
+    case _: NoPotatoException  => IO.println("Идем в магаз за картошкой :(")
+  }
 
-  val task2: IO[Double] =
-    task.handleErrorWith {
-      error => IO(-1)
-    }
-
-//  val result =task.unsafeRunSync()
-  val result = task2.unsafeRunSync()
-  println(result)
+// redeem
+  val redeemed: IO[String] = makeOlivier.redeem(
+    _ => "Положим мяско!",
+    _ => "Положим колбаску!"
+  )
+  val redeemedWith: IO[String] = makeOlivier.redeemWith(
+    _ => IO.println("Идем в магаз за колбасой :("),
+    _ => IO.println("Режем колбаску")
+  )
 }
