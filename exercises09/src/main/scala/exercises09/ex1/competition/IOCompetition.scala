@@ -23,7 +23,31 @@ import exercises09.ex1.twitter.domain.User
   * CompetitionMethods.topAuthor
   */
 class IOCompetition(service: TwitterService[IO], methods: CompetitionMethods[IO]) extends Competition[IO] {
-  def winner(users: List[User], followers: Map[User, List[User]], botUser: User): IO[User] = ???
+  def winner(users: List[User], followers: Map[User, List[User]], botUser: User): IO[User] =
+    for {
+      tweets <- users.parTraverse { user =>
+        tweetAndCollectLikes(followers, user)
+      }
+      _      <- methods.unlikeAll(botUser, tweets)
+      topOpt <- methods.topAuthor(tweets)
+      winner <- topOpt match {
+        case Some(user) => IO.pure(user)
+        case None       => IO.raiseError(TopAuthorNotFound)
+      }
+    } yield winner
+
+  private def tweetAndCollectLikes(followers: Map[User, List[User]], user: User) = {
+    for {
+      tweet <- service.tweet(user, "")
+      _ <- followers
+        .get(user)
+        .traverse_ { followerList =>
+          followerList.traverse_ { follower =>
+            service.like(follower, tweet)
+          }
+        }
+    } yield tweet
+  }
 }
 
 object IOCompetitionRun extends IOApp {

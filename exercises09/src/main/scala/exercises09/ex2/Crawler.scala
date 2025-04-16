@@ -1,6 +1,6 @@
 package exercises09.ex2
 
-import cats.effect.IO
+import cats.effect.{IO, Ref}
 import cats.implicits._
 
 /*
@@ -51,5 +51,69 @@ import cats.implicits._
  */
 class Crawler(client: HttpClient[IO]) {
 
-  def crawl(root: HttpClient.URL): IO[Set[HttpClient.URL]] = ???
+  private val visitedRef: IO[Ref[IO, Set[HttpClient.URL]]] = Ref.of[IO, Set[HttpClient.URL]](Set.empty)
+
+  def crawl(
+      root: HttpClient.URL,
+      parent: Option[HttpClient.URL] = None
+  ): IO[Set[HttpClient.URL]] =
+    for {
+      ref    <- visitedRef
+      result <- crawlInternal(root, ref, parent)
+    } yield result
+
+  private def crawlInternal(
+      url: HttpClient.URL,
+      visitedRef: Ref[IO, Set[HttpClient.URL]],
+      parent: Option[HttpClient.URL]
+  ): IO[Set[HttpClient.URL]] =
+    for {
+      alreadyVisited <- markVisited(url, visitedRef)
+      result <- if (alreadyVisited) skip
+      else fetchAndProcess(url, visitedRef, parent)
+    } yield result
+
+  private def markVisited(
+      url: HttpClient.URL,
+      visitedRef: Ref[IO, Set[HttpClient.URL]]
+  ): IO[Boolean] =
+    visitedRef.modify { current =>
+      if (current.contains(url)) (current, true)
+      else (current + url, false)
+    }
+
+  private def fetchAndProcess(
+      url: HttpClient.URL,
+      visitedRef: Ref[IO, Set[HttpClient.URL]],
+      parent: Option[HttpClient.URL]
+  ): IO[Set[HttpClient.URL]] = {
+    val attempted = retry(client.get(url), 2)
+    attempted.attempt.flatMap {
+      case Left(_)     => skip
+      case Right(body) => processBody(url, body, parent, visitedRef)
+    }
+  }
+
+  private def processBody(
+      url: HttpClient.URL,
+      body: HttpClient.HttpResponse,
+      parent: Option[HttpClient.URL],
+      visitedRef: Ref[IO, Set[HttpClient.URL]]
+  ): IO[Set[HttpClient.URL]] =
+    for {
+      links    <- IO.delay(UrlSearch.search(parent.getOrElse(url), url, body))
+      children <- links.toList.traverse(link => crawlInternal(link, visitedRef, Some(url)))
+    } yield children.flatten.toSet + url
+
+  private def retry[A](
+      action: IO[A],
+      retries: Int
+  ): IO[A] =
+    action.handleErrorWith {
+      case _ if retries > 0 => retry(action, retries - 1)
+      case err              => IO.raiseError(err)
+    }
+
+  private def skip: IO[Set[HttpClient.URL]] =
+    IO.pure(Set.empty)
 }
