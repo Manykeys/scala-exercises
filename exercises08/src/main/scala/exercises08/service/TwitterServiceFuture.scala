@@ -6,9 +6,8 @@ import exercises08.twitter.domain.{TweetId, User}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-
 /*
-* Future обертка над колбечным апи (TwitterAPI).
+ * Future обертка над колбечным апи (TwitterAPI).
  */
 class TwitterServiceFuture(api: TwitterApi)(implicit ec: ExecutionContext) extends TwitterService[Future] {
   def tweet(user: User, text: String): Future[TweetId] = ???
