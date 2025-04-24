@@ -26,5 +26,22 @@ object Registry {
       userAlg: UserAlg[F],
       appAlg: ApplicationAlg[F],
       trustworthinessAlg: TrustworthinessAlg[F]
-  ): Registry[F] = ???
+  ): Registry[F] = new Registry[F] {
+    override def signUp(user: User): F[Unit] =
+      for {
+
+        maybeUser <- userAlg.getBy(user.passport)
+        _ <- maybeUser.fold(Sync[F].unit) { _ =>
+          MonadThrow[F].raiseError(Error.UserAlreadyExists)
+        }
+
+        maybeId <- appAlg.getApplicationBy(user)
+        _ <- maybeId.fold(Sync[F].unit) { _ =>
+          MonadThrow[F].raiseError(Error.UserApplicationAlreadyExists)
+        }
+
+        applicationId <- trustworthinessAlg.check(user)
+        _             <- appAlg.persist(applicationId, user, 1.minute)
+      } yield ()
+  }
 }

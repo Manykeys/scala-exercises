@@ -6,7 +6,7 @@ import cats.syntax.all._
 import io.circe.generic.auto._
 import org.http4s._
 import org.http4s.circe.jsonOf
-import org.http4s.dsl.Http4sDsl
+import org.http4s.dsl._
 import registry.domain.Registry
 import registry.domain.model.{User, ValidationError}
 
@@ -36,8 +36,19 @@ class SignUp[F[_]: Concurrent](registry: Registry[F]) extends Http4sDsl[F] {
                   .handleErrorWith(handleE)
               case Invalid(errors) =>
                 //TODO: составить отформатированное сообщение об ошибках валидации
-                val message: String = ???
-                BadRequest(message)
+                val message = errors
+                  .foldLeft(List.empty[String]) { (acc, err) =>
+                    val part = err match {
+                      case ValidationError.PhoneIsInvalid                 => "Номер телефона указан неверно"
+                      case ValidationError.PassportIsInvalid              => "Данные паспорта заполнены неверно"
+                      case ValidationError.NameHasInvalidCharacters       => "Имя содержит некорректные символы"
+                      case ValidationError.PatronymicHasInvalidCharacters => "Отчество содержит некорректные символы"
+                      case ValidationError.SurnameHasInvalidCharacters    => "Фамилия содержит некорректные символы"
+                    }
+                    acc :+ part
+                  }
+                  .mkString("-")
+                BadRequest("Форма заполнена неверно:-" ++ message)
             }
           case Left(err) => BadRequest(err.getMessage())
         }
@@ -45,6 +56,10 @@ class SignUp[F[_]: Concurrent](registry: Registry[F]) extends Http4sDsl[F] {
   }
 
   //TODO: обработать ошибки бизнес логики
-  private def handleE(err: Throwable): F[Response[F]] = ???
-
+  private def handleE(err: Throwable): F[Response[F]] =
+    err match {
+      case Registry.Error.UserAlreadyExists            => BadRequest("Данный пользователь уже зарегистрирован в системе")
+      case Registry.Error.UserApplicationAlreadyExists => BadRequest("Заявка на регистрацию уже заведена")
+      case _                                           => InternalServerError("Произошла ошибка, повторите попытку позже: FAIL!!1!")
+    }
 }

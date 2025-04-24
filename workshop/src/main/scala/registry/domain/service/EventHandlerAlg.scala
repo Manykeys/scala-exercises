@@ -3,6 +3,8 @@ package registry.domain.service
 import cats._
 import cats.syntax.all._
 import registry.domain.model.ApprovalEvent
+import registry.domain.model.ApprovalEvent.Result.{Mistrust, Trust}
+import registry.domain.service.EventHandlerAlg.Error.UserNotFound
 
 import scala.util.control.NoStackTrace
 
@@ -26,6 +28,16 @@ object EventHandlerAlg {
   ) extends EventHandlerAlg[F] {
 
     //TODO: реализовать обработку события
-    override def handle(ae: ApprovalEvent): F[Unit] = ???
+    override def handle(ae: ApprovalEvent): F[Unit] =
+      ae.result match {
+        case Trust =>
+          for {
+            userOpt <- appAlg.getUserBy(ae.appId)
+            user    <- MonadThrow[F].fromOption(userOpt, UserNotFound)
+            _       <- userAlg.persist(user)
+            _       <- appAlg.remove(ae.appId)
+          } yield ()
+        case Mistrust => appAlg.remove(ae.appId)
+      }
   }
 }

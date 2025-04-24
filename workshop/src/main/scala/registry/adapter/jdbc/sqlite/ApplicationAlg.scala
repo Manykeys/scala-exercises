@@ -36,9 +36,9 @@ object ApplicationAlg {
           .map(_.headOption)
         res <- response match {
           case Some((id, expired)) =>
-            val exp = ZonedDateTime.from(formatter.parse(expired))
+            val exp     = ZonedDateTime.from(formatter.parse(expired))
             val current = ZonedDateTime.now()
-            val appId = Application.Id(id)
+            val appId   = Application.Id(id)
             if (current.isBefore(exp))
               appId.some.pure[F]
             else {
@@ -62,10 +62,11 @@ object ApplicationAlg {
           .map(_.headOption)
         res <- response match {
           case Some((passport, name, surname, patronymic, phone, expired)) =>
-            val exp = ZonedDateTime.from(formatter.parse(expired))
+            val exp     = ZonedDateTime.from(formatter.parse(expired))
             val current = ZonedDateTime.now()
             if (current.isBefore(exp))
-              User(name, surname, patronymic, Passport.parseUnsafe(passport), PhoneNumber.parseUnsafe(phone)).some.pure[F]
+              User(name, surname, patronymic, Passport.parseUnsafe(passport), PhoneNumber.parseUnsafe(phone)).some
+                .pure[F]
             else {
               remove(appId)
               None.pure[F]
@@ -74,7 +75,6 @@ object ApplicationAlg {
         }
 
       } yield res
-
 
     override def persist(appId: Application.Id, user: User, ttl: FiniteDuration): F[Unit] = sql"""
       INSERT INTO application (id, passport, name, surname, patronymic, phone, expired) VALUES (
